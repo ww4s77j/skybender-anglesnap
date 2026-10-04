@@ -57,14 +57,26 @@ public final class DialProjection {
 		float radius,
 		float panelSize
 	) {
-		float dYaw = wrapDegrees(panelYaw - cameraYaw);
-		float dPitch = panelPitch - cameraPitch;
+		double panelYawRadians = Math.toRadians(panelYaw);
+		double panelPitchRadians = Math.toRadians(panelPitch);
+		double cameraYawRadians = Math.toRadians(cameraYaw);
+		double cameraPitchRadians = Math.toRadians(cameraPitch);
+		double panelCosPitch = Math.cos(panelPitchRadians);
+		double panelX = -Math.sin(panelYawRadians) * panelCosPitch;
+		double panelY = -Math.sin(panelPitchRadians);
+		double panelZ = Math.cos(panelYawRadians) * panelCosPitch;
 
-		double yawRadians = Math.toRadians(dYaw);
-		double pitchRadians = Math.toRadians(dPitch);
-		double right = Math.sin(yawRadians) * Math.cos(pitchRadians);
-		double up = -Math.sin(pitchRadians);
-		double forward = Math.cos(yawRadians) * Math.cos(pitchRadians);
+		double cameraSinYaw = Math.sin(cameraYawRadians);
+		double cameraCosYaw = Math.cos(cameraYawRadians);
+		double cameraSinPitch = Math.sin(cameraPitchRadians);
+		double cameraCosPitch = Math.cos(cameraPitchRadians);
+		double right = panelX * -cameraCosYaw + panelZ * -cameraSinYaw;
+		double up = panelX * -cameraSinYaw * cameraSinPitch
+			+ panelY * cameraCosPitch
+			+ panelZ * cameraCosYaw * cameraSinPitch;
+		double forward = panelX * -cameraSinYaw * cameraCosPitch
+			+ panelY * -cameraSinPitch
+			+ panelZ * cameraCosYaw * cameraCosPitch;
 
 		// The panel is on the far side of the sphere when it is not roughly in front of us.
 		if (forward < 0.08 || radius <= 0.0f) {
@@ -78,7 +90,8 @@ public final class DialProjection {
 		float x = (float) (screenWidth / 2.0 + right * radius * focal / depth);
 		float y = (float) (screenHeight / 2.0 - up * radius * focal / depth);
 		float size = (float) (panelSize * focal / depth);
-		return new Projected(x, y, size, shade(dYaw, dPitch), true);
+		double angularOffset = Math.toDegrees(Math.acos(Math.max(-1.0, Math.min(1.0, forward))));
+		return new Projected(x, y, size, shade((float) angularOffset, 0.0f), true);
 	}
 
 	/** Brightness multiplier for a panel, decreasing with its angular distance from the crosshair. */

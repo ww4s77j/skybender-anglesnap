@@ -86,6 +86,21 @@ class SkybendDialTest {
 	}
 
 	@Test
+	void verticalSwitchesProjectCorrectlyRegardlessOfTheirYaw() {
+		DialProjection.Projected fire = DialProjection.project(0.0f, 90.0f, 0.0f, 45.0f, 70.0f, 800, 600, 3.0f, 0.9f);
+		DialProjection.Projected fireAtDifferentYaw = DialProjection.project(90.0f, 90.0f, 0.0f, 45.0f, 70.0f, 800, 600, 3.0f, 0.9f);
+		DialProjection.Projected up = DialProjection.project(0.0f, -90.0f, 0.0f, -45.0f, 70.0f, 800, 600, 3.0f, 0.9f);
+
+		assertTrue(fire.visible());
+		assertTrue(fireAtDifferentYaw.visible());
+		assertEquals(fire.x(), fireAtDifferentYaw.x(), 0.01f);
+		assertEquals(fire.y(), fireAtDifferentYaw.y(), 0.01f);
+		assertTrue(fire.y() > 300.0f, "looking partway down, Fire must remain below the crosshair");
+		assertTrue(up.visible());
+		assertTrue(up.y() < 300.0f, "looking partway up, Up must remain above the crosshair");
+	}
+
+	@Test
 	void closerPanelsAreBiggerAndTurningShiftsThem() {
 		DialProjection.Projected near = DialProjection.project(0.0f, 0.0f, 0.0f, 0.0f, 70.0f, 800, 600, 2.0f, 0.9f);
 		DialProjection.Projected far = DialProjection.project(0.0f, 0.0f, 0.0f, 0.0f, 70.0f, 800, 600, 4.0f, 0.9f);
