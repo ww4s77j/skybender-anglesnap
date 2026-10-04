@@ -11,7 +11,7 @@ public class SkybenderAnglesnapClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		SkybendCommands.register();
-		// The dial is one extra HUD layer; it draws by default and /skybend overlay off hides it.
+		// The dial is one extra HUD layer; it is hidden until enabled with /skybend overlay on.
 		HudElementRegistry.addLast(
 			Identifier.fromNamespaceAndPath(SkybenderAnglesnap.MOD_ID, "dial"),
 			new DialHudElement()
@@ -20,9 +20,11 @@ public class SkybenderAnglesnapClient implements ClientModInitializer {
 		// Tick-rate samples and any in-flight schedule belong to one server session only.
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
 			ServerTps.onWorldChanged();
+			SkybendConfig.activate(client);
 			DialGauge.reset();
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+			SkybendConfig.deactivate();
 			ServerTps.onWorldChanged();
 			SequencePlayer.cancel();
 			EtaCountdown.cancel();

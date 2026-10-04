@@ -33,10 +33,13 @@ public final class SkybendCommands {
 		ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
 			LiteralArgumentBuilder<FabricClientCommandSource> root = literal("skybend")
 				.then(literal("set")
-					.then(argument("n", IntegerArgumentType.integer(1, 15))
-						.then(argument("ox", IntegerArgumentType.integer())
-							.then(argument("oz", IntegerArgumentType.integer())
-								.executes(SkybendCommands::set)))))
+					.then(literal("size")
+						.then(argument("size", IntegerArgumentType.integer(1, 15))
+							.executes(SkybendCommands::setSize)))
+					.then(literal("origin")
+						.then(argument("originX", IntegerArgumentType.integer())
+							.then(argument("originZ", IntegerArgumentType.integer())
+								.executes(SkybendCommands::setOrigin)))))
 				.then(literal("overlay")
 					.executes(SkybendCommands::overlayStatus)
 					.then(literal("on")
@@ -78,13 +81,19 @@ public final class SkybendCommands {
 		return RequiredArgumentBuilder.argument(name, type);
 	}
 
-	private static int set(CommandContext<FabricClientCommandSource> ctx) {
-		int n = IntegerArgumentType.getInteger(ctx, "n");
-		int ox = IntegerArgumentType.getInteger(ctx, "ox");
-		int oz = IntegerArgumentType.getInteger(ctx, "oz");
-		SkybendSettings.set(n, ox, oz);
+	private static int setSize(CommandContext<FabricClientCommandSource> ctx) {
+		int size = IntegerArgumentType.getInteger(ctx, "size");
+		SkybendSettings.setSize(size);
+		ctx.getSource().sendFeedback(Component.literal("skybend set size " + size));
+		return 1;
+	}
+
+	private static int setOrigin(CommandContext<FabricClientCommandSource> ctx) {
+		int originX = IntegerArgumentType.getInteger(ctx, "originX");
+		int originZ = IntegerArgumentType.getInteger(ctx, "originZ");
+		SkybendSettings.setOrigin(originX, originZ);
 		ctx.getSource().sendFeedback(Component.literal(
-			String.format("skybend set n=%d origin=(%d,%d)", n, ox, oz)
+			String.format("skybend set origin %d %d", originX, originZ)
 		));
 		return 1;
 	}
@@ -95,7 +104,11 @@ public final class SkybendCommands {
 	 */
 	private static int timeOrFire(CommandContext<FabricClientCommandSource> ctx, boolean fire, boolean useLookRay) {
 		if (!SkybendSettings.isSet()) {
-			ctx.getSource().sendError(Component.literal("No settings — use /skybend set <n> <ox> <oz> first"));
+			String missing = !SkybendSettings.hasSize() && !SkybendSettings.hasOrigin()
+				? "size and origin"
+				: SkybendSettings.hasSize() ? "origin" : "size";
+			ctx.getSource().sendError(Component.literal(
+				"No " + missing + " configured — use /skybend set size <1-15> and /skybend set origin <originX> <originZ>"));
 			return 0;
 		}
 

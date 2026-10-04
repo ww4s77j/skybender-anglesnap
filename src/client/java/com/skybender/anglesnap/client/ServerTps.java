@@ -62,10 +62,12 @@ public final class ServerTps {
 
 	public static void setOverride(double tps) {
 		MODEL.setOverride(tps);
+		SkybendConfig.save();
 	}
 
 	public static void clearOverride() {
 		MODEL.clearOverride();
+		SkybendConfig.save();
 	}
 
 	public static int sampleCount() {

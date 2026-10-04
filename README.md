@@ -42,21 +42,21 @@ Troubleshooting:
 
 Building:
  - Run `./gradlew build` (or `./gradlew buildAll`, which does the same thing) to build all supported targets. Each release JAR is written to its target project's `build/libs` directory, and the unit tests run as part of the build.
- - Run `./gradlew buildandplay` to build every target and then launch a development client to test by hand; it blocks until you close Minecraft. Pick a version with `-Pmc=mc12111` (default is `mc263`), and use `./gradlew :mc263:runClient` to launch one without rebuilding first.
+ - Run `./gradlew buildAndPlay` to build every target and then launch a development client to test by hand; it blocks until you close Minecraft. Pick a version with `-Pmc=mc12111` (default is `mc263`), and use `./gradlew :mc263:runClient` to launch one without rebuilding first.
  - A development run uses its own directory at `targets/<target>/run`, so your normal `.minecraft` installation is untouched and each version can keep its own test world.
 
 Verifying a build:
  - `./gradlew build` already proves that every supported version compiles and that its tests pass, which is what catches Minecraft and Fabric API changes between versions.
  - The six versions share only two code paths: `1.21.11` uses one set of client classes and `26.1` through `26.3` share another, so launching `-Pmc=mc263` and `-Pmc=mc12111` covers the runtime behaviour of all six.
- - In the launched game, join a world and check three things: `/skybend` offers `set`, `tps`, `overlay`, `time` and `fire`; `/skybend tps` reports a measured rate rather than the fallback; and the dial is visible and sweeps as you turn.
+ - In the launched game, join a world and check three things: `/skybend` offers `set`, `tps`, `overlay`, `time` and `fire`; `/skybend tps` reports a measured rate rather than the fallback; and `/skybend overlay on` shows the dial, which sweeps as you turn.
  - The log files at `targets/<target>/run/logs/latest.log` should contain `Server time hook active` after joining a world. If that line is missing, the packet hook did not load on that version and the tick rate will stay at its 20 TPS default.
 
 In Game:
- - Run command `/skybend set <n> <ox> <oz>` where `<n>` is the size of the tnt warhead (1-15), `<ox>` is the X coordinate of the cannon origin and `<oz>` is the z coordinate of the cannon origin.
+ - Run `/skybend set size <n>` to set the warhead size (1-15), and `/skybend set origin <ox> <oz>` to set the cannon origin. Both settings are required and are saved per world/server across game restarts. Overlay options and manual TPS overrides are also saved per world/server.
  - Run command `/skybend time <tx> <tz>` where `<tx>` is the target x coordinate, and `<tz>` is the target z coordinate. Running this command without a defined target, i.e. `tx` and `tz` intentionally left blank, will instead use the location that the player is looking at in the world. The command will then return a time estimate for delivery of a tnt warhead to the target location.
  - Run command `/skybend fire <tx> <tz>` where `<tx>` is the target x coordinate, and `<tz>` is the target z coordinate. Running this command without a defined target, i.e. `tx` and `tz` intentionally left blank, will instead use the location that the player is looking at in the world. The command will then compell the client to look at a specific sequence of view directions to transfer target information to the cannon remotely using the cannons wireless interface.
  - Run command `/skybend tps` to show the server tick rate the mod is pacing against, `/skybend tps auto` to go back to measuring it, or `/skybend tps <rate>` to pin it manually (1-100).
- - The in-world input dial is drawn by default: all sixteen encoder digits placed around you at the angles the cannon reads, the smaller master/fire/up switches, and a gauge around the crosshair that runs red to green to show when the next input may be given. `/skybend overlay off` hides it and `/skybend overlay on` brings it back, `radius <blocks>` and `scale <factor>` resize it, and `/skybend overlay` alone reports the current setting.
+ - The in-world input dial is hidden by default. When enabled, it shows all sixteen encoder digits placed around you at the angles the cannon reads, the smaller master/fire/up switches, and a gauge around the crosshair that runs red to green to show when the next input may be given. Use `/skybend overlay on|off` to show or hide it, `/skybend overlay radius <blocks>` or `/skybend overlay scale <factor>` to resize it, and `/skybend overlay` to report the current settings.
 
 
 
@@ -67,7 +67,7 @@ Server timing:
  - The mod measures the server's real tick rate from the game time a vanilla server broadcasts once per second, and paces both the input sequence and the time estimate against it. On a server running below 20 TPS each angle is held for the same number of server ticks the cannon expects, just spread over more real time; if the server stalls, the countdown freezes rather than running past it.
 
 Dial overlay:
- - The dial renders entirely on your client and is shown by default (use `/skybend overlay off` to hide it). It mirrors what the mod is transmitting: the digit panel you are looking at is framed in white, which is also the panel a hand input would send. Nothing about it is visible to other players and it never changes what is transmitted.
+ - The dial renders entirely on your client and is hidden by default (use `/skybend overlay on` to show it). It mirrors what the mod is transmitting: the digit panel you are looking at is framed in white, which is also the panel a hand input would send. Nothing about it is visible to other players and it never changes what is transmitted.
 
  - `/skybend tps` shows the rate currently in use, `/skybend tps auto` goes back to measuring it, and `/skybend tps <rate>` pins a fixed rate (1-100) if you would rather not trust the measurement. The rate only affects pacing, never the encoded payload.
 
