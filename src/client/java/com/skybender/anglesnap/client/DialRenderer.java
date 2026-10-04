@@ -22,6 +22,8 @@ final class DialRenderer {
 	private static final int GAUGE_EMPTY = 0x60303030;
 	private static final int SELECTED_FRAME = 0xFFFFFFFF;
 	private static final int MIN_PANEL_PIXELS = 6;
+	private static final float RIBBON_CELL_WIDTH = 1.3f;
+	private static final float RIBBON_ASPECT_RATIO = 11.0f;
 
 	private DialRenderer() {
 	}
@@ -75,15 +77,19 @@ final class DialRenderer {
 	}
 
 	private static void drawPanel(DialDraw draw, DialLayout.Panel panel, DialProjection.Projected projected, boolean selected) {
-		int size = Math.round(projected.size());
-		if (size < MIN_PANEL_PIXELS) {
+		boolean ribbonCell = panel.label().length() == 1;
+		int width = Math.round(projected.size() * (ribbonCell ? RIBBON_CELL_WIDTH : 1.0f));
+		int height = ribbonCell
+			? Math.max(MIN_PANEL_PIXELS, Math.round(projected.size() * RIBBON_CELL_WIDTH / RIBBON_ASPECT_RATIO))
+			: width;
+		if (width < MIN_PANEL_PIXELS) {
 			return;
 		}
 
-		int left = Math.round(projected.x()) - size / 2;
-		int top = Math.round(projected.y()) - size / 2;
-		int right = left + size;
-		int bottom = top + size;
+		int left = Math.round(projected.x()) - width / 2;
+		int top = Math.round(projected.y()) - height / 2;
+		int right = left + width;
+		int bottom = top + height;
 
 		draw.fillGradient(left, top, right, bottom,
 			shade(panel.color(), projected.shade() * 1.15f),
@@ -96,7 +102,7 @@ final class DialRenderer {
 			draw.fill(right, top - 1, right + 1, bottom + 1, SELECTED_FRAME);
 		}
 
-		drawLabel(draw, panel.label(), left, top, size, DialLayout.TEXT_COLOR);
+		drawLabel(draw, panel.label(), left, top, Math.min(width, height), DialLayout.TEXT_COLOR);
 	}
 
 	/** Draws a label as pixel-font rectangles, sized to stay inside its panel. */
