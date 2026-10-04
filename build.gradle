@@ -147,9 +147,10 @@ tasks.register('buildAndPlay') {
 			"Unknown Minecraft target '${requested}'. Use -Pmc=<target> with one of: ${playTargets.join(', ')}")
 	}
 
+	def buildTask = tasks.named('build')
 	def runClient = project(":${requested}").tasks.named('runClient')
 	// dependsOn + mustRunAfter rather than finalizedBy, so a failed build never opens the game.
-	dependsOn(tasks.named('build'))
+	dependsOn(buildTask)
 	dependsOn(runClient)
-	runClient.mustRunAfter(tasks.named('build'))
+	runClient.configure { mustRunAfter(buildTask) }
 }
