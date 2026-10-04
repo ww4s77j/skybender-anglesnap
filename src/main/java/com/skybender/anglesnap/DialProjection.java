@@ -64,13 +64,14 @@ public final class DialProjection {
 		double forward;
 		float shade;
 		if (Math.abs(panelPitch) >= 89.0f) {
-			// At the pitch poles, Minecraft's look vector has no horizontal direction, but the
-			// cannon still reads yaw as a separate angle. Keep that yaw visible on the dial.
+			// At the pitch poles, the panel's yaw is a separate control input rather than part of
+			// the camera's forward vector. Keep that yaw cue on screen and place the pole panels
+			// in a fixed angle-space ring so FIRE and UP do not collapse into the same point.
 			double yawRadians = Math.toRadians(deltaYaw);
 			double pitchRadians = Math.toRadians(deltaPitch);
-			right = Math.sin(yawRadians) * Math.cos(pitchRadians);
+			right = Math.sin(yawRadians);
 			up = -Math.sin(pitchRadians);
-			forward = Math.cos(yawRadians) * Math.cos(pitchRadians);
+			forward = 1.0;
 			shade = shade(deltaYaw, deltaPitch);
 		} else {
 			double panelYawRadians = Math.toRadians(panelYaw);

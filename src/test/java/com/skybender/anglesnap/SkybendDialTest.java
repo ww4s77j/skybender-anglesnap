@@ -103,6 +103,16 @@ class SkybendDialTest {
 	}
 
 	@Test
+	void verticalSwitchesRemainVisibleAndDistinctAtThePitchPoles() {
+		DialProjection.Projected fire = DialProjection.project(90.0f, 90.0f, -90.0f, -90.0f, 70.0f, 800, 600, 3.0f, 0.9f);
+		DialProjection.Projected up = DialProjection.project(0.0f, -90.0f, 45.0f, -90.0f, 70.0f, 800, 600, 3.0f, 0.9f);
+
+		assertTrue(fire.visible(), "fire must stay visible at the pitch pole");
+		assertTrue(up.visible(), "up must stay visible when the camera rotates away from its zero yaw");
+		assertTrue(fire.x() != up.x(), "fire and up must keep distinct yaw cues at the same pole");
+	}
+
+	@Test
 	void closerPanelsAreBiggerAndTurningShiftsThem() {
 		DialProjection.Projected near = DialProjection.project(0.0f, 0.0f, 0.0f, 0.0f, 70.0f, 800, 600, 2.0f, 0.9f);
 		DialProjection.Projected far = DialProjection.project(0.0f, 0.0f, 0.0f, 0.0f, 70.0f, 800, 600, 4.0f, 0.9f);
