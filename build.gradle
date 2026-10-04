@@ -153,9 +153,3 @@ tasks.register('buildAndPlay') {
 	dependsOn(runClient)
 	runClient.mustRunAfter(tasks.named('build'))
 }
-
-tasks.register('buildandplay') {
-	group = 'fabric'
-	description = 'Alias for buildAndPlay, so the task name can be typed in lower case.'
-	dependsOn(tasks.named('buildAndPlay'))
-}
