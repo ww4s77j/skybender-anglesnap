@@ -86,18 +86,20 @@ class SkybendDialTest {
 	}
 
 	@Test
-	void verticalSwitchesProjectCorrectlyRegardlessOfTheirYaw() {
-		DialProjection.Projected fire = DialProjection.project(0.0f, 90.0f, 0.0f, 45.0f, 70.0f, 800, 600, 3.0f, 0.9f);
-		DialProjection.Projected fireAtDifferentYaw = DialProjection.project(90.0f, 90.0f, 0.0f, 45.0f, 70.0f, 800, 600, 3.0f, 0.9f);
-		DialProjection.Projected up = DialProjection.project(0.0f, -90.0f, 0.0f, -45.0f, 70.0f, 800, 600, 3.0f, 0.9f);
+	void verticalSwitchesKeepTheirYawCueAtThePitchPoles() {
+		DialProjection.Projected fireAligned = DialProjection.project(90.0f, 90.0f, 90.0f, 90.0f, 70.0f, 800, 600, 3.0f, 0.9f);
+		DialProjection.Projected fireToTheRight = DialProjection.project(90.0f, 90.0f, 60.0f, 90.0f, 70.0f, 800, 600, 3.0f, 0.9f);
+		DialProjection.Projected upAligned = DialProjection.project(0.0f, -90.0f, 0.0f, -90.0f, 70.0f, 800, 600, 3.0f, 0.9f);
+		DialProjection.Projected upToTheLeft = DialProjection.project(0.0f, -90.0f, 30.0f, -90.0f, 70.0f, 800, 600, 3.0f, 0.9f);
 
-		assertTrue(fire.visible());
-		assertTrue(fireAtDifferentYaw.visible());
-		assertEquals(fire.x(), fireAtDifferentYaw.x(), 0.01f);
-		assertEquals(fire.y(), fireAtDifferentYaw.y(), 0.01f);
-		assertTrue(fire.y() > 300.0f, "looking partway down, Fire must remain below the crosshair");
-		assertTrue(up.visible());
-		assertTrue(up.y() < 300.0f, "looking partway up, Up must remain above the crosshair");
+		assertTrue(fireAligned.visible());
+		assertEquals(400.0f, fireAligned.x(), 0.01f);
+		assertTrue(fireToTheRight.visible());
+		assertTrue(fireToTheRight.x() > 400.0f, "Fire's yaw must remain visible while looking straight down");
+		assertTrue(upAligned.visible());
+		assertEquals(400.0f, upAligned.x(), 0.01f);
+		assertTrue(upToTheLeft.visible());
+		assertTrue(upToTheLeft.x() < 400.0f, "Up's yaw must remain visible while looking straight up");
 	}
 
 	@Test

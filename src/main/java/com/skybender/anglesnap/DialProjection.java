@@ -57,26 +57,44 @@ public final class DialProjection {
 		float radius,
 		float panelSize
 	) {
-		double panelYawRadians = Math.toRadians(panelYaw);
-		double panelPitchRadians = Math.toRadians(panelPitch);
-		double cameraYawRadians = Math.toRadians(cameraYaw);
-		double cameraPitchRadians = Math.toRadians(cameraPitch);
-		double panelCosPitch = Math.cos(panelPitchRadians);
-		double panelX = -Math.sin(panelYawRadians) * panelCosPitch;
-		double panelY = -Math.sin(panelPitchRadians);
-		double panelZ = Math.cos(panelYawRadians) * panelCosPitch;
-
-		double cameraSinYaw = Math.sin(cameraYawRadians);
-		double cameraCosYaw = Math.cos(cameraYawRadians);
-		double cameraSinPitch = Math.sin(cameraPitchRadians);
-		double cameraCosPitch = Math.cos(cameraPitchRadians);
-		double right = panelX * -cameraCosYaw + panelZ * -cameraSinYaw;
-		double up = panelX * -cameraSinYaw * cameraSinPitch
-			+ panelY * cameraCosPitch
-			+ panelZ * cameraCosYaw * cameraSinPitch;
-		double forward = panelX * -cameraSinYaw * cameraCosPitch
-			+ panelY * -cameraSinPitch
-			+ panelZ * cameraCosYaw * cameraCosPitch;
+		float deltaYaw = wrapDegrees(panelYaw - cameraYaw);
+		float deltaPitch = panelPitch - cameraPitch;
+		double right;
+		double up;
+		double forward;
+		float shade;
+		if (Math.abs(panelPitch) >= 89.0f) {
+			// At the pitch poles, Minecraft's look vector has no horizontal direction, but the
+			// cannon still reads yaw as a separate angle. Keep that yaw visible on the dial.
+			double yawRadians = Math.toRadians(deltaYaw);
+			double pitchRadians = Math.toRadians(deltaPitch);
+			right = Math.sin(yawRadians) * Math.cos(pitchRadians);
+			up = -Math.sin(pitchRadians);
+			forward = Math.cos(yawRadians) * Math.cos(pitchRadians);
+			shade = shade(deltaYaw, deltaPitch);
+		} else {
+			double panelYawRadians = Math.toRadians(panelYaw);
+			double panelPitchRadians = Math.toRadians(panelPitch);
+			double cameraYawRadians = Math.toRadians(cameraYaw);
+			double cameraPitchRadians = Math.toRadians(cameraPitch);
+			double panelCosPitch = Math.cos(panelPitchRadians);
+			double panelX = -Math.sin(panelYawRadians) * panelCosPitch;
+			double panelY = -Math.sin(panelPitchRadians);
+			double panelZ = Math.cos(panelYawRadians) * panelCosPitch;
+			double cameraSinYaw = Math.sin(cameraYawRadians);
+			double cameraCosYaw = Math.cos(cameraYawRadians);
+			double cameraSinPitch = Math.sin(cameraPitchRadians);
+			double cameraCosPitch = Math.cos(cameraPitchRadians);
+			right = panelX * -cameraCosYaw + panelZ * -cameraSinYaw;
+			up = panelX * -cameraSinYaw * cameraSinPitch
+				+ panelY * cameraCosPitch
+				+ panelZ * cameraCosYaw * cameraSinPitch;
+			forward = panelX * -cameraSinYaw * cameraCosPitch
+				+ panelY * -cameraSinPitch
+				+ panelZ * cameraCosYaw * cameraCosPitch;
+			double angularOffset = Math.toDegrees(Math.acos(Math.max(-1.0, Math.min(1.0, forward))));
+			shade = shade((float) angularOffset, 0.0f);
+		}
 
 		// The panel is on the far side of the sphere when it is not roughly in front of us.
 		if (forward < 0.08 || radius <= 0.0f) {
@@ -90,8 +108,7 @@ public final class DialProjection {
 		float x = (float) (screenWidth / 2.0 + right * radius * focal / depth);
 		float y = (float) (screenHeight / 2.0 - up * radius * focal / depth);
 		float size = (float) (panelSize * focal / depth);
-		double angularOffset = Math.toDegrees(Math.acos(Math.max(-1.0, Math.min(1.0, forward))));
-		return new Projected(x, y, size, shade((float) angularOffset, 0.0f), true);
+		return new Projected(x, y, size, shade, true);
 	}
 
 	/** Brightness multiplier for a panel, decreasing with its angular distance from the crosshair. */
