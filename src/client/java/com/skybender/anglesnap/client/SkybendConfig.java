@@ -138,9 +138,9 @@ final class SkybendConfig {
 			if (server == null || server.ip == null || server.ip.isBlank()) {
 				return null;
 			}
-			exactIdentity = server.ip.trim();
-			identity = "multiplayer:" + exactIdentity.toLowerCase(Locale.ROOT);
-			displayName = "multiplayer-" + exactIdentity;
+			exactIdentity = server.ip;
+			identity = "multiplayer:" + server.ip.trim().toLowerCase(Locale.ROOT);
+			displayName = "multiplayer-" + server.ip.trim();
 		}
 		return new ProfileIdentity(identity, exactIdentity, displayName);
 	}
@@ -203,23 +203,21 @@ final class SkybendConfig {
 
 	private static String safeFileName(String name) {
 		StringBuilder safeName = new StringBuilder();
-		for (byte value : name.getBytes(StandardCharsets.UTF_8)) {
-			int character = value & 0xFF;
-			if (character >= 'a' && character <= 'z'
-				|| character >= 'A' && character <= 'Z'
-				|| character >= '0' && character <= '9'
+		boolean sanitized = false;
+		for (int character : name.codePoints().toArray()) {
+			if (Character.isLetterOrDigit(character)
 				|| character == ' ' || character == '.' || character == '_' || character == '-') {
-				safeName.append((char) character);
+				safeName.appendCodePoint(character);
 			} else {
-				safeName.append('%')
-					.append("0123456789ABCDEF".charAt(character >>> 4))
-					.append("0123456789ABCDEF".charAt(character & 0x0F));
+				safeName.append('_');
+				sanitized = true;
 			}
 		}
-		if (safeName.length() > 180) {
-			return safeName.substring(0, 140) + "-" + digest(name).substring(0, 24);
+		if (safeName.length() > 120) {
+			safeName.setLength(110);
+			sanitized = true;
 		}
-		return safeName.toString();
+		return sanitized ? safeName + "-" + digest(name).substring(0, 8) : safeName.toString();
 	}
 
 	private static int integer(Properties properties, String key, int fallback) {
