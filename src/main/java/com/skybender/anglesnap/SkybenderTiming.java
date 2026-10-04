@@ -19,6 +19,8 @@ public final class SkybenderTiming {
 	private static final int INPUT_ACTIVATE_STEP = 33;
 	private static final int INPUT_SETTLE = 93;
 	private static final int INPUT_DIGIT_STEP = 20;
+	/** Server ticks one input digit occupies: its 10-tick data phase plus the 10-tick strobe. */
+	public static final int INPUT_DIGIT_PERIOD = INPUT_DIGIT_STEP;
 	private static final int INPUT_DIGIT_COUNT = 11;
 
 	private SkybenderTiming() {

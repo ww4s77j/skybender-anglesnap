@@ -7,11 +7,16 @@ import net.minecraft.client.player.LocalPlayer;
 import java.util.List;
 
 /**
- * Plays a precomputed angle sequence on the client tick clock.
+ * Plays a precomputed angle sequence on the server's tick clock.
+ *
+ * <p>The schedule is expressed in server ticks, so it is paced by {@link ServerTickClock} rather
+ * than by the client's own tick counter: a server running at 10 TPS holds each angle twice as long,
+ * which is exactly what the cannon expects.
  */
 public final class SequencePlayer {
+	private static final ServerTickClock CLOCK = new ServerTickClock();
+
 	private static List<SkybendSequence.AngleStep> steps;
-	private static int startTick;
 	private static int nextIndex;
 	private static boolean active;
 
@@ -20,9 +25,7 @@ public final class SequencePlayer {
 
 	public static void start(List<SkybendSequence.AngleStep> sequence) {
 		steps = List.copyOf(sequence);
-		startTick = Minecraft.getInstance().player != null
-			? Minecraft.getInstance().player.tickCount
-			: 0;
+		CLOCK.start();
 		nextIndex = 0;
 		active = !steps.isEmpty();
 		if (active) {
@@ -34,6 +37,7 @@ public final class SequencePlayer {
 		active = false;
 		steps = null;
 		nextIndex = 0;
+		CLOCK.stop();
 	}
 
 	public static boolean isActive() {
@@ -54,7 +58,7 @@ public final class SequencePlayer {
 			return;
 		}
 
-		int elapsed = player.tickCount - startTick;
+		double elapsed = CLOCK.ticks();
 		while (nextIndex < steps.size()) {
 			SkybendSequence.AngleStep step = steps.get(nextIndex);
 			if (step.tick() > elapsed) {

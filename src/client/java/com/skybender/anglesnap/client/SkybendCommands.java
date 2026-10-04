@@ -1,12 +1,15 @@
 package com.skybender.anglesnap.client;
 
 import com.mojang.brigadier.arguments.ArgumentType;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.builder.RequiredArgumentBuilder;
 import com.mojang.brigadier.context.CommandContext;
+import com.skybender.anglesnap.DialLayout;
 import com.skybender.anglesnap.SkybendEncoder;
 import com.skybender.anglesnap.SkybendSequence;
+import com.skybender.anglesnap.SkybendTpsModel;
 import com.skybender.anglesnap.SkybenderTiming;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
@@ -16,6 +19,8 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
+
+import java.util.Locale;
 
 public final class SkybendCommands {
 	/** Long look-ray for targeting (vanilla crosshair is only interaction reach). */
@@ -32,6 +37,24 @@ public final class SkybendCommands {
 						.then(argument("ox", IntegerArgumentType.integer())
 							.then(argument("oz", IntegerArgumentType.integer())
 								.executes(SkybendCommands::set)))))
+				.then(literal("overlay")
+					.executes(SkybendCommands::overlayStatus)
+					.then(literal("on")
+						.executes(ctx -> setOverlay(ctx, true)))
+					.then(literal("off")
+						.executes(ctx -> setOverlay(ctx, false)))
+					.then(literal("radius")
+						.then(argument("blocks", DoubleArgumentType.doubleArg(DialLayout.MIN_RADIUS, DialLayout.MAX_RADIUS))
+							.executes(SkybendCommands::overlayRadius)))
+					.then(literal("scale")
+						.then(argument("factor", DoubleArgumentType.doubleArg(DialLayout.MIN_SCALE, DialLayout.MAX_SCALE))
+							.executes(SkybendCommands::overlayScale))))
+				.then(literal("tps")
+					.executes(SkybendCommands::tpsStatus)
+					.then(literal("auto")
+						.executes(SkybendCommands::tpsAuto))
+					.then(argument("rate", DoubleArgumentType.doubleArg(SkybendTpsModel.MIN_TPS, SkybendTpsModel.MAX_TPS))
+						.executes(SkybendCommands::tpsSet)))
 				.then(literal("time")
 					.executes(ctx -> timeOrFire(ctx, false, true))
 					.then(argument("tx", IntegerArgumentType.integer())
@@ -98,13 +121,78 @@ public final class SkybendCommands {
 		int eta = SkybenderTiming.predictTime(n, encoded.machineX(), encoded.machineZ());
 
 		ctx.getSource().sendFeedback(Component.literal(
-			"Time Estimate: " + EtaCountdown.formatHms((eta + 19) / 20)
+			"Time Estimate: " + EtaCountdown.formatTicks(eta)
 		));
+
+		if (fire && !ServerTps.isOverridden() && ServerTps.hasHeardFromServer() && ServerTps.tps() < 19.0) {
+			ctx.getSource().sendFeedback(Component.literal(String.format(Locale.ROOT,
+				"Server is running at %.2f TPS — the sequence is paced to match", ServerTps.tps())));
+		}
 
 		if (fire) {
 			SequencePlayer.start(SkybendSequence.build(encoded.hexDigits()));
 			EtaCountdown.start(eta);
 		}
+		return 1;
+	}
+
+	private static int overlayStatus(CommandContext<FabricClientCommandSource> ctx) {
+		ctx.getSource().sendFeedback(Component.literal(String.format(Locale.ROOT,
+			"Dial overlay is %s — radius %.2f, scale %.2f (/skybend overlay on|off|radius|scale)",
+			DialOptions.enabled() ? "on" : "off", DialOptions.radius(), DialOptions.scale())));
+		return 1;
+	}
+
+	private static int setOverlay(CommandContext<FabricClientCommandSource> ctx, boolean enabled) {
+		DialOptions.setEnabled(enabled);
+		ctx.getSource().sendFeedback(Component.literal("skybend overlay " + (enabled ? "on" : "off")));
+		return 1;
+	}
+
+	private static int overlayRadius(CommandContext<FabricClientCommandSource> ctx) {
+		DialOptions.setRadius((float) DoubleArgumentType.getDouble(ctx, "blocks"));
+		ctx.getSource().sendFeedback(Component.literal(
+			String.format(Locale.ROOT, "skybend overlay radius %.2f", DialOptions.radius())));
+		return 1;
+	}
+
+	private static int overlayScale(CommandContext<FabricClientCommandSource> ctx) {
+		DialOptions.setScale((float) DoubleArgumentType.getDouble(ctx, "factor"));
+		ctx.getSource().sendFeedback(Component.literal(
+			String.format(Locale.ROOT, "skybend overlay scale %.2f", DialOptions.scale())));
+		return 1;
+	}
+
+	private static int tpsStatus(CommandContext<FabricClientCommandSource> ctx) {
+		ServerTps.Status status = ServerTps.status();
+		String text;
+		if (!status.heardFromServer()) {
+			text = String.format(Locale.ROOT, "TPS %.2f (no server time packets yet — using the default)", status.tps());
+		} else if (status.overridden()) {
+			text = String.format(Locale.ROOT, "TPS %.2f (manual override) — measured %.2f, tick %.1f ms",
+				status.tps(), status.measuredTps(), status.tickMillis());
+		} else {
+			text = String.format(Locale.ROOT, "TPS %.2f (measured) — %d samples, tick %.1f ms",
+				status.tps(), status.samples(), status.tickMillis());
+		}
+		ctx.getSource().sendFeedback(Component.literal(text));
+		return 1;
+	}
+
+	private static int tpsAuto(CommandContext<FabricClientCommandSource> ctx) {
+		ServerTps.clearOverride();
+		ctx.getSource().sendFeedback(Component.literal(
+			String.format(Locale.ROOT, "skybend tps auto (measured %.2f)", ServerTps.tps())
+		));
+		return 1;
+	}
+
+	private static int tpsSet(CommandContext<FabricClientCommandSource> ctx) {
+		double rate = DoubleArgumentType.getDouble(ctx, "rate");
+		ServerTps.setOverride(rate);
+		ctx.getSource().sendFeedback(Component.literal(
+			String.format(Locale.ROOT, "skybend tps %.2f (manual)", ServerTps.tps())
+		));
 		return 1;
 	}
 

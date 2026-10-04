@@ -50,6 +50,9 @@ subprojects {
 				rootProject.file('src/client/java'),
 				rootProject.file(target.obfuscated ? 'src/legacy/client/java' : 'src/modern/client/java')
 			])
+			// Mixin compatibility levels differ per generation: the 1.21.11 mixin API tops out at
+			// JAVA_21, while the 26.x mixin API (and their Java 25 compiler output) needs JAVA_25.
+			resources.srcDir rootProject.file(target.obfuscated ? 'src/legacy/client/resources' : 'src/modern/client/resources')
 		}
 		test {
 			java.setSrcDirs([rootProject.file('src/test/java')])
@@ -120,4 +123,39 @@ tasks.register('buildAll') {
 	group = 'build'
 	description = 'Builds a release JAR for every supported Minecraft version.'
 	dependsOn(subprojects.collect { it.tasks.named('build') })
+}
+
+// `gradlew build` on its own would only build the root project, which produces nothing, so it is
+// wired to build every target as well.
+tasks.named('build') {
+	description = 'Builds a release JAR for every supported Minecraft version.'
+	dependsOn(subprojects.collect { it.tasks.named('build') })
+}
+
+// Builds every target, then launches a single dev client to test by hand. Fabric API is already on
+// the classpath in a dev run, so nothing has to be installed. This task blocks until the game is
+// closed, which is why `build` deliberately stays build-only and CI keeps calling `buildAll`.
+def playTargets = supportedTargets.keySet().collect { it.toString() }
+
+tasks.register('buildAndPlay') {
+	group = 'fabric'
+	description = 'Builds every target, then launches one dev client with the mod loaded for manual testing.'
+
+	def requested = (project.findProperty('mc') ?: 'mc263').toString()
+	if (!playTargets.contains(requested)) {
+		throw new GradleException(
+			"Unknown Minecraft target '${requested}'. Use -Pmc=<target> with one of: ${playTargets.join(', ')}")
+	}
+
+	def runClient = project(":${requested}").tasks.named('runClient')
+	// dependsOn + mustRunAfter rather than finalizedBy, so a failed build never opens the game.
+	dependsOn(tasks.named('build'))
+	dependsOn(runClient)
+	runClient.mustRunAfter(tasks.named('build'))
+}
+
+tasks.register('buildandplay') {
+	group = 'fabric'
+	description = 'Alias for buildAndPlay, so the task name can be typed in lower case.'
+	dependsOn(tasks.named('buildAndPlay'))
 }
